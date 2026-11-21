@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Join a hotel on Inn</title>
+  <link rel="stylesheet" href="/inn/style.css?v=2">
+</head>
+<body>
+  <main>
+    <h1>Inn</h1>
+    <section lang="th">
+      <p>คุณได้รับเชิญให้เข้าร่วมโรงแรมบน Inn ในฐานะพนักงาน</p>
+      <p><a class="open" href="#">เปิดใน Inn</a></p>
+      <p>ถ้ายังไม่มีแอป ให้ติดตั้ง Inn ลงชื่อเข้าใช้ แล้วกลับมาเปิดลิงก์นี้อีกครั้ง ลิงก์ใช้ได้ 1 คน ภายใน 7 วัน</p>
+    </section>
+    <section>
+      <p>You're invited to join a hotel on Inn as staff.</p>
+      <p><a class="open" href="#">Open in Inn</a></p>
+      <p>Don't have the app yet? Install Inn, sign in, then open this link again. The link works for one person, for 7 days.</p>
+    </section>
+  </main>
+  <script>
+    // The invite code travels in the query string; the app takes it from "inn://invite?code=…".
+    const code = new URLSearchParams(location.search).get("code") || "";
+    const appLink = /^[0-9a-f]{32}$/.test(code) ? "inn://invite?code=" + code : null;
+    for (const link of document.querySelectorAll("a.open")) {
+      if (appLink) {
+        link.href = appLink;
+      } else {
+        link.replaceWith(document.createTextNode(link.closest("[lang=th]")
+          ? "ลิงก์นี้ไม่สมบูรณ์ ขอลิงก์ใหม่จากเจ้าของโรงแรม"
+          : "This link is incomplete. Ask the hotel owner for a new one."));
+      }
+    }
+  </script>
+</body>
+</html>
