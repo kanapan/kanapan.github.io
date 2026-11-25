@@ -96,6 +96,7 @@ const localizedStrings = {
     network: "เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่",
     server_error: "ระบบขัดข้อง ลองใหม่อีกครั้ง",
     booking_page_not_found: "ไม่พบหน้าจองนี้ หรือโรงแรมปิดรับจองออนไลน์แล้ว",
+    booking_page_not_ready: "โรงแรมนี้ยังไม่เปิดรับจองออนไลน์ ติดต่อโรงแรมโดยตรง",
     invalid_dates: "เลือกวันเช็กอินและเช็กเอาต์ใหม่",
     invalid_guests: "จำนวนผู้เข้าพักไม่ถูกต้อง",
     missing_guest_name: "ใส่ชื่อผู้เข้าพัก",
@@ -193,6 +194,7 @@ const localizedStrings = {
     network: "Can't connect. Check your internet and try again.",
     server_error: "Something went wrong. Please try again.",
     booking_page_not_found: "This booking page doesn't exist, or the hotel has closed online booking.",
+    booking_page_not_ready: "This hotel doesn't take online bookings yet. Please contact the hotel.",
     invalid_dates: "Choose your check-in and check-out dates again.",
     invalid_guests: "The number of guests isn't valid.",
     missing_guest_name: "Enter the guest's name.",
@@ -391,7 +393,8 @@ function pageHeader() {
       onclick: () => {
         pageLanguage = pageLanguage === "th" ? "en" : "th";
         localStorage.setItem("inn.language", pageLanguage);
-        showPageForCurrentLocation();
+        rememberTypedGuestDetails();
+        showCurrentPageAgain();
       },
     }, localizedText("otherLanguage")));
 }
@@ -399,6 +402,22 @@ function pageHeader() {
 function stickyActionBar(summary, button) {
   return makeElement("div", { className: "bar" },
     makeElement("div", {}, makeElement("div", { className: "summary" }, summary), button));
+}
+
+/** Shows the page on screen again, in the new language: the guest details form stays the form. */
+function showCurrentPageAgain() {
+  if (document.getElementById("guest-details") && bookingState.chosenRoomOffer) return showGuestDetailsForm();
+  return showPageForCurrentLocation();
+}
+
+/** Keeps what the guest typed in the details form, if it's on screen. */
+function rememberTypedGuestDetails() {
+  const field = (id) => document.getElementById(id)?.value;
+  if (!document.getElementById("guest-details")) return;
+  Object.assign(bookingState.guest, {
+    name: field("guest-name") ?? "", phone: field("guest-phone") ?? "",
+    email: field("guest-email") ?? "", note: field("guest-note") ?? "",
+  });
 }
 
 // MARK: - The booking page
@@ -625,6 +644,11 @@ function policySentences(page) {
       ? `ยกเลิกฟรีก่อนวันเข้าพัก ${days} วัน หลังจากนั้นไม่คืนเงิน`
       : `Free cancellation until ${days} ${days === 1 ? "day" : "days"} before arrival; no refund after that.`);
   }
+  if (policies.cancellation !== "non_refundable") {
+    sentences.push(policies.no_show_charge === "first_night"
+      ? (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าคืนแรก" : "If you don't arrive without telling the hotel, the first night is charged.")
+      : (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าห้องเต็มจำนวน" : "If you don't arrive without telling the hotel, the whole stay is charged."));
+  }
   const prepayment = policies.prepayment;
   if (prepayment.kind === "percentage") {
     sentences.push(isThai
@@ -776,6 +800,8 @@ function showGuestDetailsForm() {
 
 let bookingRefreshTimer = null;
 let paymentCountdownTimer = null;
+/** A slip picture the guest chose but hasn't sent; while there is one, the page isn't redrawn under them. */
+let unsentPaymentSlip = null;
 
 function stopRefreshTimers() {
   clearTimeout(bookingRefreshTimer);
@@ -878,6 +904,8 @@ function savableQRCodeImage(svgText) {
 function paymentCard(booking, bookingId, accessToken) {
   const countdown = makeElement("p", { className: "countdown muted" }, localizedText("timeLeft", timeLeftUntil(booking.payment_deadline)));
   paymentCountdownTimer = setInterval(() => {
+    // Only the slip deadline matters while one is chosen; the redraw it causes would drop the slip.
+    if (unsentPaymentSlip && Date.parse(booking.payment_deadline) <= Date.now()) return;
     countdown.textContent = localizedText("timeLeft", timeLeftUntil(booking.payment_deadline));
     if (Date.parse(booking.payment_deadline) <= Date.now()) showGuestBooking(bookingId, accessToken);
   }, 1000);
@@ -922,6 +950,7 @@ function paymentSlipForm(bookingId, accessToken) {
     errorParagraph.textContent = "";
     try {
       slipDataURL = await resizedJPEGDataURL(file);
+      unsentPaymentSlip = slipDataURL;
       slipPreview.src = slipDataURL;
       slipPreview.hidden = false;
       sendButton.hidden = false;
@@ -941,6 +970,7 @@ function paymentSlipForm(bookingId, accessToken) {
       await requestStore("POST", `/bookings/${bookingId}/payment-slips`, {
         accessToken, body: { image: slipDataURL.split(",")[1] },
       });
+      unsentPaymentSlip = null;
       showGuestBooking(bookingId, accessToken);
     } catch (error) {
       errorParagraph.textContent = errorMessage(error);
@@ -1001,8 +1031,14 @@ function showPageForCurrentLocation() {
   return showBookingPage();
 }
 
-window.addEventListener("hashchange", showPageForCurrentLocation);
+window.addEventListener("hashchange", () => {
+  unsentPaymentSlip = null;
+  showPageForCurrentLocation();
+});
+// Back from the banking app, the booking may have moved on; a slip chosen but not sent is kept instead.
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && location.hash.startsWith("#b=")) showPageForCurrentLocation();
+  if (document.visibilityState === "visible" && location.hash.startsWith("#b=") && !unsentPaymentSlip) {
+    showPageForCurrentLocation();
+  }
 });
 showPageForCurrentLocation();
