@@ -11,6 +11,13 @@ const bookingEngineURL = ["localhost", "127.0.0.1"].includes(location.hostname) 
   ? pageParameters.get("booking_engine") : productionBookingEngineURL;
 const pageContent = document.getElementById("app");
 
+/** The link to a hotel's booking page, keeping the test booking engine of a copy served on this computer. */
+function bookingPageLink(bookingPageCode) {
+  const parameters = new URLSearchParams({ h: bookingPageCode });
+  if (bookingEngineURL !== productionBookingEngineURL) parameters.set("booking_engine", bookingEngineURL);
+  return `?${parameters}`;
+}
+
 // MARK: - Language
 
 const localizedStrings = {
@@ -93,6 +100,8 @@ const localizedStrings = {
     keepThisLink: "บันทึกหน้านี้ไว้ ใช้กลับมาดูการจองและส่งสลิป",
     sentPaymentSlip: "สลิปที่ส่งแล้ว",
     // Error codes from the booking engine, and "network" for a request that never reached it.
+    tryAgain: "ลองใหม่",
+    hotelApprovesFirst: "โรงแรมจะตรวจสอบและยืนยันการจองนี้ก่อน การจองจะสมบูรณ์เมื่อโรงแรมยืนยันแล้ว หน้าถัดไปจะแสดงสถานะให้",
     network: "เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่",
     server_error: "ระบบขัดข้อง ลองใหม่อีกครั้ง",
     booking_page_not_found: "ไม่พบหน้าจองนี้ หรือโรงแรมปิดรับจองออนไลน์แล้ว",
@@ -110,7 +119,11 @@ const localizedStrings = {
     booking_not_found: "ไม่พบการจองนี้",
     invalid_payment_slip_image: "ใช้รูปนี้ไม่ได้ เลือกรูปสลิปใหม่",
     booking_not_awaiting_payment: "การจองนี้ไม่ได้รอชำระเงินแล้ว",
-    booking_not_cancellable: "ส่งสลิปแล้ว ยกเลิกเองไม่ได้ ติดต่อโรงแรมเพื่อยกเลิก",
+    booking_not_cancellable: "ยกเลิกเองไม่ได้แล้ว ติดต่อโรงแรมเพื่อยกเลิก",
+    booking_cancel_after_slip: "ส่งสลิปแล้ว ยกเลิกเองไม่ได้ ติดต่อโรงแรมเพื่อยกเลิก",
+    booking_already_confirmed: "โรงแรมยืนยันการจองแล้ว ยกเลิกเองไม่ได้ ติดต่อโรงแรมเพื่อยกเลิก",
+    payment_deadline_passed: "หมดเวลาชำระเงินแล้ว การจองนี้ถูกยกเลิกไปแล้ว",
+    body_too_large: "รูปใหญ่เกินไป เลือกรูปสลิปใหม่",
   },
   en: {
     title: "Book a stay",
@@ -191,6 +204,8 @@ const localizedStrings = {
     bookingNumber: "Booking number",
     keepThisLink: "Bookmark this page to come back to your booking and send the slip.",
     sentPaymentSlip: "The slip you sent",
+    tryAgain: "Try again",
+    hotelApprovesFirst: "The hotel checks and confirms this booking first. It's complete once the hotel confirms; the next page shows when.",
     network: "Can't connect. Check your internet and try again.",
     server_error: "Something went wrong. Please try again.",
     booking_page_not_found: "This booking page doesn't exist, or the hotel has closed online booking.",
@@ -208,7 +223,11 @@ const localizedStrings = {
     booking_not_found: "No booking matches this link.",
     invalid_payment_slip_image: "This picture can't be used. Choose your slip again.",
     booking_not_awaiting_payment: "This booking isn't waiting for payment any more.",
-    booking_not_cancellable: "The slip is sent, so only the hotel can cancel. Please contact the hotel.",
+    booking_not_cancellable: "Only the hotel can cancel this booking now. Please contact the hotel.",
+    booking_cancel_after_slip: "The slip is sent, so only the hotel can cancel. Please contact the hotel.",
+    booking_already_confirmed: "The hotel has confirmed this booking, so only the hotel can cancel. Please contact the hotel.",
+    payment_deadline_passed: "Payment time ran out, so this booking is already cancelled.",
+    body_too_large: "This picture is too large. Choose your slip again.",
   },
 };
 
@@ -349,6 +368,14 @@ function errorMessage(error) {
   return localizedStrings[pageLanguage][code] ? localizedText(code) : localizedText("server_error");
 }
 
+/** The error's message and, when the request never reached the booking engine or it failed, a button to try again. */
+function errorWithRetry(error, retry) {
+  const canRetry = error instanceof BookingEngineRequestError && ["network", "server_error"].includes(error.code);
+  return makeElement("div", { className: "error", role: "alert" },
+    makeElement("p", {}, errorMessage(error)),
+    canRetry && makeElement("button", { type: "button", onclick: retry }, localizedText("tryAgain")));
+}
+
 // MARK: - What this device remembers
 
 /** A random id this browser keeps, which the hotel's limits and blocks count as "this device". */
@@ -423,7 +450,8 @@ function rememberTypedGuestDetails() {
 // MARK: - The booking page
 
 const bookingState = {
-  bookingPageCode: pageParameters.get("h"),
+  // Codes are lowercase; a link typed or shared in capitals still works.
+  bookingPageCode: pageParameters.get("h")?.toLowerCase() ?? null,
   bookingPage: null,
   stay: { check_in: todayPlusDays(0), check_out: todayPlusDays(1), adults: 2, children: 0 },
   roomOffers: null,
@@ -440,7 +468,7 @@ async function showBookingPage() {
       bookingState.bookingPage =
         (await requestBookingEngine("GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}`)).booking_page;
     } catch (error) {
-      return replacePageContent(pageHeader(), makeElement("p", { className: "error" }, errorMessage(error)));
+      return replacePageContent(pageHeader(), errorWithRetry(error, () => showBookingPage()));
     }
   }
   const page = bookingState.bookingPage;
@@ -525,7 +553,7 @@ async function searchRoomOffers(searchButton) {
     showRoomOffers();
     offersSection.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
-    offersSection.replaceChildren(makeElement("p", { className: "error" }, errorMessage(error)));
+    offersSection.replaceChildren(errorWithRetry(error, () => searchRoomOffers(searchButton)));
   } finally {
     searchButton.disabled = false;
     searchButton.textContent = localizedText("searchRoomOffers");
@@ -646,8 +674,8 @@ function policySentences(page) {
   }
   if (policies.cancellation !== "non_refundable") {
     sentences.push(policies.no_show_charge === "first_night"
-      ? (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าคืนแรก" : "If you don't arrive without telling the hotel, the first night is charged.")
-      : (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าห้องเต็มจำนวน" : "If you don't arrive without telling the hotel, the whole stay is charged."));
+      ? (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าคืนแรก" : "If you don't arrive and haven't told the hotel, the first night is charged.")
+      : (isThai ? "ถ้าไม่มาเข้าพักโดยไม่แจ้ง คิดค่าห้องเต็มจำนวน" : "If you don't arrive and haven't told the hotel, the whole stay is charged."));
   }
   const prepayment = policies.prepayment;
   if (prepayment.kind === "percentage") {
@@ -786,6 +814,9 @@ function showGuestDetailsForm() {
         `${formattedStayDates(stay.check_in, stay.check_out)} · ${localizedText("guestCount", stay.adults, stay.children)} · `,
         offer.includes_breakfast ? localizedText("breakfastIncluded") : localizedText("roomOnly")),
       priceBreakdownTable(offer, page.currency_code)),
+    // Nothing to pay now: the booking waits for the hotel, and the guest knows before confirming.
+    page.approves_bookings && !(offer.prepayment_amount > 0) &&
+      makeElement("p", { className: "notice" }, localizedText("hotelApprovesFirst")),
     guestDetailsForm,
     policiesSection(page),
     makeElement("p", { className: "muted small" }, localizedText("acceptPolicies")),
@@ -810,11 +841,13 @@ function stopRefreshTimers() {
 
 async function showGuestBooking(bookingId, accessToken) {
   stopRefreshTimers();
+  // A redraw makes a new slip form, so a slip chosen in the old one is gone with it.
+  unsentPaymentSlip = null;
   let booking;
   try {
     booking = (await requestBookingEngine("GET", `/bookings/${bookingId}`, { accessToken })).booking;
   } catch (error) {
-    return replacePageContent(pageHeader(), makeElement("p", { className: "error" }, errorMessage(error)));
+    return replacePageContent(pageHeader(), errorWithRetry(error, () => showGuestBooking(bookingId, accessToken)));
   }
   // The guest may have moved on while this loaded.
   if (location.hash !== `#b=${bookingId}.${accessToken}`) return;
@@ -823,6 +856,8 @@ async function showGuestBooking(bookingId, accessToken) {
   document.title = `${hotelName} · ${localizedText("title")}`;
   const currencyCode = booking.currency_code;
   const isPaid = ["confirmed", "checked_in", "checked_out"].includes(booking.state);
+  // A cancelled booking owes nothing, so it shows no money, only what was booked.
+  const isCancelled = ["cancelled", "payment_deadline_passed"].includes(booking.state);
   const moneyRow = (label, amount, className) => makeElement("tr", { className },
     makeElement("td", {}, label), makeElement("td", {}, formattedMoney(amount, currencyCode)));
 
@@ -833,18 +868,18 @@ async function showGuestBooking(bookingId, accessToken) {
       `${formattedStayDates(booking.check_in, booking.check_out)} · ` +
       `${localizedText("nightCount", numberOfNightsBetween(booking.check_in, booking.check_out))} · ` +
       localizedText("guestCount", booking.adults, booking.children)),
-    makeElement("table", { className: "lines" }, makeElement("tbody", {},
+    !isCancelled && makeElement("table", { className: "lines" }, makeElement("tbody", {},
       moneyRow(localizedText("total"), booking.total, "total"),
       booking.prepayment_amount > 0 &&
         moneyRow(localizedText(isPaid ? "paid" : "payWhenBooking"), booking.prepayment_amount),
       booking.amount_due_at_hotel > 0 && moneyRow(localizedText("payAtHotel"), booking.amount_due_at_hotel, "muted"))),
-    makeElement("p", { className: "muted small" }, `${localizedText("bookingNumber")}: ${booking.id.slice(0, 8).toUpperCase()}`));
+    makeElement("p", { className: "muted small" }, `${localizedText("bookingNumber")}: ${booking.booking_number}`));
 
   const sentSlipCard = booking.payment_slip_url && makeElement("div", { className: "card" },
     makeElement("h3", {}, localizedText("sentPaymentSlip")),
     makeElement("img", { className: "slip-preview", src: booking.payment_slip_url, alt: localizedText("sentPaymentSlip") }));
   const bookAgainLink = booking.booking_page_code && makeElement("p", {},
-    makeElement("a", { className: "button secondary", href: `?h=${booking.booking_page_code}` }, localizedText("bookAgain")));
+    makeElement("a", { className: "button secondary", href: bookingPageLink(booking.booking_page_code) }, localizedText("bookAgain")));
   const stateHeading = (key, tone) => makeElement("p", { className: `state ${tone}` }, localizedText(key));
   const explanation = (key) => makeElement("p", {}, localizedText(key));
 
