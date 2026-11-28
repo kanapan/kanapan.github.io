@@ -839,18 +839,18 @@ function stopRefreshTimers() {
   clearInterval(paymentCountdownTimer);
 }
 
-async function showGuestBooking(bookingId, accessToken) {
+async function showGuestBooking(bookingID, accessToken) {
   stopRefreshTimers();
   // A redraw makes a new slip form, so a slip chosen in the old one is gone with it.
   unsentPaymentSlip = null;
   let booking;
   try {
-    booking = (await requestBookingEngine("GET", `/bookings/${bookingId}`, { accessToken })).booking;
+    booking = (await requestBookingEngine("GET", `/bookings/${bookingID}`, { accessToken })).booking;
   } catch (error) {
-    return replacePageContent(pageHeader(), errorWithRetry(error, () => showGuestBooking(bookingId, accessToken)));
+    return replacePageContent(pageHeader(), errorWithRetry(error, () => showGuestBooking(bookingID, accessToken)));
   }
   // The guest may have moved on while this loaded.
-  if (location.hash !== `#b=${bookingId}.${accessToken}`) return;
+  if (location.hash !== `#b=${bookingID}.${accessToken}`) return;
   if (booking.booking_page_code) bookingState.bookingPageCode = booking.booking_page_code;
   const hotelName = displayedHotelName(booking.hotel_name, booking.hotel_name_en);
   document.title = `${hotelName} · ${localizedText("title")}`;
@@ -886,15 +886,15 @@ async function showGuestBooking(bookingId, accessToken) {
   switch (booking.state) {
     case "awaiting_payment":
       return replacePageContent(pageHeader(), stateHeading("awaitingPayment", "warn"),
-        paymentCard(booking, bookingId, accessToken), stayCard,
+        paymentCard(booking, bookingID, accessToken), stayCard,
         makeElement("p", { className: "muted small" }, localizedText("keepThisLink")),
-        cancelBookingButton(bookingId, accessToken));
+        cancelBookingButton(bookingID, accessToken));
     case "awaiting_approval":
-      bookingRefreshTimer = setTimeout(() => showGuestBooking(bookingId, accessToken), 20_000);
+      bookingRefreshTimer = setTimeout(() => showGuestBooking(bookingID, accessToken), 20_000);
       return replacePageContent(pageHeader(), stateHeading("awaitingApproval", "warn"),
-        explanation("awaitingApprovalExplanation"), stayCard, cancelBookingButton(bookingId, accessToken));
+        explanation("awaitingApprovalExplanation"), stayCard, cancelBookingButton(bookingID, accessToken));
     case "payment_slip_sent":
-      bookingRefreshTimer = setTimeout(() => showGuestBooking(bookingId, accessToken), 20_000);
+      bookingRefreshTimer = setTimeout(() => showGuestBooking(bookingID, accessToken), 20_000);
       return replacePageContent(pageHeader(), stateHeading("paymentSlipSent", "warn"),
         explanation("paymentSlipSentExplanation"), stayCard, sentSlipCard);
     case "confirmed":
@@ -936,13 +936,13 @@ function savableQRCodeImage(svgText) {
   return image;
 }
 
-function paymentCard(booking, bookingId, accessToken) {
+function paymentCard(booking, bookingID, accessToken) {
   const countdown = makeElement("p", { className: "countdown muted" }, localizedText("timeLeft", timeLeftUntil(booking.payment_deadline)));
   paymentCountdownTimer = setInterval(() => {
     // Only the slip deadline matters while one is chosen; the redraw it causes would drop the slip.
     if (unsentPaymentSlip && Date.parse(booking.payment_deadline) <= Date.now()) return;
     countdown.textContent = localizedText("timeLeft", timeLeftUntil(booking.payment_deadline));
-    if (Date.parse(booking.payment_deadline) <= Date.now()) showGuestBooking(bookingId, accessToken);
+    if (Date.parse(booking.payment_deadline) <= Date.now()) showGuestBooking(bookingID, accessToken);
   }, 1000);
 
   const instructions = booking.payment_instructions;
@@ -967,10 +967,10 @@ function paymentCard(booking, bookingId, accessToken) {
     countdown,
     makeElement("p", { className: "small" }, localizedText("holdExplanation")),
     howToPay,
-    paymentSlipForm(bookingId, accessToken));
+    paymentSlipForm(bookingID, accessToken));
 }
 
-function paymentSlipForm(bookingId, accessToken) {
+function paymentSlipForm(bookingID, accessToken) {
   const fileInput = makeElement("input", { type: "file", accept: "image/*", id: "payment-slip", style: "display:none" });
   const slipPreview = makeElement("img", { className: "slip-preview", alt: "", hidden: true });
   const errorParagraph = makeElement("p", { className: "error", role: "alert" });
@@ -1002,11 +1002,11 @@ function paymentSlipForm(bookingId, accessToken) {
     sendButton.textContent = localizedText("sendingPaymentSlip");
     errorParagraph.textContent = "";
     try {
-      await requestBookingEngine("POST", `/bookings/${bookingId}/payment-slips`, {
+      await requestBookingEngine("POST", `/bookings/${bookingID}/payment-slips`, {
         accessToken, body: { image: slipDataURL.split(",")[1] },
       });
       unsentPaymentSlip = null;
-      showGuestBooking(bookingId, accessToken);
+      showGuestBooking(bookingID, accessToken);
     } catch (error) {
       errorParagraph.textContent = errorMessage(error);
       sendButton.disabled = chooseButton.disabled = false;
@@ -1039,7 +1039,7 @@ function resizedJPEGDataURL(file) {
   });
 }
 
-function cancelBookingButton(bookingId, accessToken) {
+function cancelBookingButton(bookingID, accessToken) {
   return makeElement("button", {
     type: "button",
     className: "danger",
@@ -1047,11 +1047,11 @@ function cancelBookingButton(bookingId, accessToken) {
       if (!confirm(localizedText("confirmCancellingBooking"))) return;
       event.target.disabled = true;
       try {
-        await requestBookingEngine("POST", `/bookings/${bookingId}/cancel`, { accessToken });
+        await requestBookingEngine("POST", `/bookings/${bookingID}/cancel`, { accessToken });
       } catch (error) {
         alert(errorMessage(error));
       }
-      showGuestBooking(bookingId, accessToken);
+      showGuestBooking(bookingID, accessToken);
     },
   }, localizedText("cancelBooking"));
 }
