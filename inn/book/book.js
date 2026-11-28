@@ -90,6 +90,7 @@ const localizedStrings = {
     notTakingBookings: "โรงแรมนี้ยังไม่เปิดรับจองออนไลน์ ติดต่อโรงแรมโดยตรง",
     awaitingPayment: "รอการชำระเงิน",
     holdExplanation: "เรากันห้องไว้ให้ 1 ชั่วโมง โอนแล้วแนบสลิปภายในเวลานี้ ไม่อย่างนั้นการจองจะถูกยกเลิก",
+    holdExplanationCard: "เรากันห้องไว้ให้ 1 ชั่วโมง ชำระภายในเวลานี้ ไม่อย่างนั้นการจองจะถูกยกเลิก",
     timeLeft: (time) => `เหลือเวลา ${time}`,
     scanToPay: "สแกนจ่ายด้วยแอปธนาคารใดก็ได้ ยอดเงินจะขึ้นให้เอง",
     saveQRCode: "กดค้างที่ QR เพื่อบันทึกรูป แล้วเปิดในแอปธนาคาร",
@@ -218,6 +219,7 @@ const localizedStrings = {
     notTakingBookings: "This hotel doesn't take online bookings yet. Please contact the hotel.",
     awaitingPayment: "Waiting for payment",
     holdExplanation: "Your room is held for 1 hour. Transfer and attach the slip in that time, or the booking is cancelled.",
+    holdExplanationCard: "Your room is held for 1 hour. Pay in that time, or the booking is cancelled.",
     timeLeft: (time) => `${time} left`,
     scanToPay: "Scan with any Thai banking app; the amount fills in for you.",
     saveQRCode: "Press and hold the QR code to save it, then open it in your banking app.",
@@ -989,6 +991,7 @@ let unsentPaymentSlip = null;
 function stopRefreshTimers() {
   clearTimeout(bookingRefreshTimer);
   clearInterval(paymentCountdownTimer);
+  window.InnCheckout?.stopCheckoutPolling();
 }
 
 async function showGuestBooking(bookingID, accessToken) {
@@ -1052,7 +1055,7 @@ async function showGuestBooking(bookingID, accessToken) {
         explanation("paymentSlipSentExplanation"), stayCard, sentSlipCard);
     case "confirmed":
       return replacePageContent(pageHeader(), stateHeading("confirmed", "good"), explanation("confirmedExplanation"),
-        stayCard, sentSlipCard, bookAgainLink);
+        stayCard, sentSlipCard, window.InnCheckout?.confirmedBookingActions(booking, bookingID, accessToken), bookAgainLink);
     case "checked_in":
     case "checked_out":
       return replacePageContent(pageHeader(),
@@ -1118,9 +1121,12 @@ function paymentCard(booking, bookingID, accessToken) {
   return makeElement("div", { className: "card" },
     makeElement("p", { className: "amount" }, formattedMoney(booking.prepayment_amount, booking.currency_code)),
     countdown,
-    makeElement("p", { className: "small" }, localizedText("holdExplanation")),
+    // A hotel that takes deposits only through its card gateway has no transfer details and takes no slip.
+    makeElement("p", { className: "small" }, localizedText(howToPay ? "holdExplanation" : "holdExplanationCard")),
+    // Card, Apple Pay, Google Pay and PromptPay through the hotel's gateway, when it has one (checkout.js).
+    window.InnCheckout?.gatewayPaymentSection(booking, bookingID, accessToken),
     howToPay,
-    paymentSlipForm(bookingID, accessToken));
+    howToPay && paymentSlipForm(bookingID, accessToken));
 }
 
 function paymentSlipForm(bookingID, accessToken) {
@@ -1214,6 +1220,8 @@ function cancelBookingButton(bookingID, accessToken) {
 function showPageForCurrentLocation() {
   stopRefreshTimers();
   document.documentElement.lang = pageLanguage;
+  // Back from a card payment, or a payment link the hotel sent (checkout.js).
+  if (window.InnCheckout?.showsCheckoutPageForLocation()) return;
   const bookingLink = location.hash.match(/^#b=([0-9a-f-]{36})\.([0-9a-f]{48})$/);
   if (bookingLink) return showGuestBooking(bookingLink[1], bookingLink[2]);
   return showBookingPage();
