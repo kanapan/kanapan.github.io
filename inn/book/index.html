@@ -5,15 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
   <meta name="referrer" content="no-referrer">
+  <!-- Only Inn's own scripts and the card gateways' (their fields are iframes they host), so no injected script can
+       read a card form (PCI DSS SAQ A). A copy served on this computer may call a booking engine on it. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com https://cdn.omise.co; frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://cdn.omise.co https://*.omise.co; connect-src 'self' https://*.supabase.co https://api.stripe.com http://127.0.0.1:* http://localhost:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Book a stay</title>
   <link rel="stylesheet" href="/inn/style.css?v=2">
-  <link rel="stylesheet" href="/inn/book/book.css?v=3">
+  <link rel="stylesheet" href="/inn/book/book.css?v=4">
 </head>
 <body>
   <main id="app">
     <p class="muted">…</p>
   </main>
   <noscript><main><p>เปิด JavaScript เพื่อจองห้อง · Turn on JavaScript to book.</p></main></noscript>
-  <script src="/inn/book/book.js?v=7"></script>
+  <script src="/inn/book/checkout.js?v=2"></script>
+  <script src="/inn/book/book.js?v=8"></script>
 </body>
 </html>
