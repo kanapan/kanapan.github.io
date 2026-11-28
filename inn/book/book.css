@@ -105,3 +105,13 @@ summary { cursor: pointer; color: var(--link); }
 
 /* Buttons and pictures set their own display, which would otherwise show them while hidden. */
 [hidden] { display: none !important; }
+
+/* Paying through the hotel's gateway (checkout.js). */
+.gap { height: 8px; }
+button.secondary-fill { background: var(--field); color: var(--text); border: 1px solid var(--rule); font-weight: 600; }
+button.danger-fill { background: var(--bad); color: #fff; }
+.divider { text-align: center; margin: 16px 0 8px; }
+.test-mode { color: var(--warn); }
+.consent { display: block; margin-top: 8px; line-height: 1.4; }
+.block-text { display: block; margin-top: 4px; }
+#payment-element, #express-checkout { margin-bottom: 12px; }
