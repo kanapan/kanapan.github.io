@@ -1,14 +1,14 @@
 // A hotel's booking page: pick dates and a room, book, then pay and send the slip.
 // Links: /inn/book/?h=<booking page code> for the hotel, and #b=<booking id>.<access token> for a booking. The token
 // is only in the fragment, which browsers never send to a server, and in this browser's storage so the guest can
-// come back. Every price comes from the Store API (the `store` edge function); this page only shows it.
+// come back. Every price comes from the booking engine (the `booking-engine` edge function); this page only shows it.
 "use strict";
 
-const productionStoreURL = "https://huajuadlepkzptizxeyf.supabase.co/functions/v1/store";
+const productionBookingEngineURL = "https://huajuadlepkzptizxeyf.supabase.co/functions/v1/booking-engine";
 const pageParameters = new URLSearchParams(location.search);
 // A copy of the page served on this computer may point at a function served on this computer, for testing.
-const storeURL = ["localhost", "127.0.0.1"].includes(location.hostname) && pageParameters.get("store")
-  ? pageParameters.get("store") : productionStoreURL;
+const bookingEngineURL = ["localhost", "127.0.0.1"].includes(location.hostname) && pageParameters.get("booking_engine")
+  ? pageParameters.get("booking_engine") : productionBookingEngineURL;
 const pageContent = document.getElementById("app");
 
 // MARK: - Language
@@ -92,7 +92,7 @@ const localizedStrings = {
     bookingNumber: "หมายเลขการจอง",
     keepThisLink: "บันทึกหน้านี้ไว้ ใช้กลับมาดูการจองและส่งสลิป",
     sentPaymentSlip: "สลิปที่ส่งแล้ว",
-    // Error codes from the Store API, and "network" for a request that never reached it.
+    // Error codes from the booking engine, and "network" for a request that never reached it.
     network: "เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่",
     server_error: "ระบบขัดข้อง ลองใหม่อีกครั้ง",
     booking_page_not_found: "ไม่พบหน้าจองนี้ หรือโรงแรมปิดรับจองออนไลน์แล้ว",
@@ -318,17 +318,17 @@ function numberOfNightsBetween(checkIn, checkOut) {
   return Math.round((Date.parse(`${checkOut}T00:00:00Z`) - Date.parse(`${checkIn}T00:00:00Z`)) / 86_400_000);
 }
 
-// MARK: - The Store API
+// MARK: - The booking engine
 
-class StoreRequestError extends Error {
+class BookingEngineRequestError extends Error {
   constructor(code) {
     super(code);
     this.code = code;
   }
 }
 
-async function requestStore(method, path, { query, body, accessToken } = {}) {
-  const url = new URL(storeURL + path);
+async function requestBookingEngine(method, path, { query, body, accessToken } = {}) {
+  const url = new URL(bookingEngineURL + path);
   for (const [name, value] of Object.entries(query ?? {})) url.searchParams.set(name, value);
   const headers = {};
   if (body) headers["Content-Type"] = "application/json";
@@ -337,15 +337,15 @@ async function requestStore(method, path, { query, body, accessToken } = {}) {
   try {
     response = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
   } catch {
-    throw new StoreRequestError("network");
+    throw new BookingEngineRequestError("network");
   }
   const result = await response.json().catch(() => ({ code: "server_error" }));
-  if (!response.ok) throw new StoreRequestError(result.code || "server_error");
+  if (!response.ok) throw new BookingEngineRequestError(result.code || "server_error");
   return result;
 }
 
 function errorMessage(error) {
-  const code = error instanceof StoreRequestError ? error.code : "server_error";
+  const code = error instanceof BookingEngineRequestError ? error.code : "server_error";
   return localizedStrings[pageLanguage][code] ? localizedText(code) : localizedText("server_error");
 }
 
@@ -438,7 +438,7 @@ async function showBookingPage() {
   if (!bookingState.bookingPage) {
     try {
       bookingState.bookingPage =
-        (await requestStore("GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}`)).booking_page;
+        (await requestBookingEngine("GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}`)).booking_page;
     } catch (error) {
       return replacePageContent(pageHeader(), makeElement("p", { className: "error" }, errorMessage(error)));
     }
@@ -520,7 +520,7 @@ async function searchRoomOffers(searchButton) {
   searchButton.disabled = true;
   searchButton.textContent = localizedText("searchingRoomOffers");
   try {
-    bookingState.roomOffers = await requestStore(
+    bookingState.roomOffers = await requestBookingEngine(
       "GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}/room-offers`, { query: bookingState.stay });
     showRoomOffers();
     offersSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -738,7 +738,7 @@ function showGuestDetailsForm() {
       confirmButton.disabled = true;
       confirmButton.textContent = localizedText("confirmingBooking");
       try {
-        const { booking, guest_access_token: accessToken } = await requestStore("POST", "/bookings", {
+        const { booking, guest_access_token: accessToken } = await requestBookingEngine("POST", "/bookings", {
           body: {
             booking_page_code: bookingState.bookingPageCode,
             room_type_id: offer.room_type_id,
@@ -812,7 +812,7 @@ async function showGuestBooking(bookingId, accessToken) {
   stopRefreshTimers();
   let booking;
   try {
-    booking = (await requestStore("GET", `/bookings/${bookingId}`, { accessToken })).booking;
+    booking = (await requestBookingEngine("GET", `/bookings/${bookingId}`, { accessToken })).booking;
   } catch (error) {
     return replacePageContent(pageHeader(), makeElement("p", { className: "error" }, errorMessage(error)));
   }
@@ -967,7 +967,7 @@ function paymentSlipForm(bookingId, accessToken) {
     sendButton.textContent = localizedText("sendingPaymentSlip");
     errorParagraph.textContent = "";
     try {
-      await requestStore("POST", `/bookings/${bookingId}/payment-slips`, {
+      await requestBookingEngine("POST", `/bookings/${bookingId}/payment-slips`, {
         accessToken, body: { image: slipDataURL.split(",")[1] },
       });
       unsentPaymentSlip = null;
@@ -1012,7 +1012,7 @@ function cancelBookingButton(bookingId, accessToken) {
       if (!confirm(localizedText("confirmCancellingBooking"))) return;
       event.target.disabled = true;
       try {
-        await requestStore("POST", `/bookings/${bookingId}/cancel`, { accessToken });
+        await requestBookingEngine("POST", `/bookings/${bookingId}/cancel`, { accessToken });
       } catch (error) {
         alert(errorMessage(error));
       }
