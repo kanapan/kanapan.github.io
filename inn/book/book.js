@@ -28,10 +28,13 @@ const localizedStrings = {
     checkOut: "เช็กเอาต์",
     adults: "ผู้ใหญ่",
     children: "เด็ก",
+    infants: "ทารก (ต่ำกว่า 2 ปี)",
+    promoCode: "โค้ดส่วนลด (ถ้ามี)",
     searchRoomOffers: "ดูห้องว่าง",
     searchingRoomOffers: "กำลังหาห้องว่าง…",
     nightCount: (count) => `${count} คืน`,
-    guestCount: (adults, children) => children ? `ผู้ใหญ่ ${adults} · เด็ก ${children}` : `ผู้ใหญ่ ${adults}`,
+    guestCount: (adults, children, infants) => (children ? `ผู้ใหญ่ ${adults} · เด็ก ${children}` : `ผู้ใหญ่ ${adults}`) +
+      (infants ? ` · ทารก ${infants}` : ""),
     roomsLeft: (count) => count <= 3 ? `เหลือ ${count} ห้อง` : "",
     chooseRoomOffer: "เลือก",
     breakfastIncluded: "รวมอาหารเช้า",
@@ -41,7 +44,24 @@ const localizedStrings = {
     tooFewNights: (count) => `ต้องพักอย่างน้อย ${count} คืน`,
     tooManyNights: (count) => `พักได้ไม่เกิน ${count} คืน`,
     closedNights: "ไม่เปิดขายบางคืนในวันที่เลือก",
+    closedToArrival: "ไม่รับเช็กอินในวันที่เลือก",
+    closedToDeparture: "ไม่รับเช็กเอาต์ในวันที่เลือก",
+    outsideBookingWindow: "ไม่เปิดขายสำหรับวันเข้าพักนี้",
     notSold: "ยังไม่เปิดขายในวันที่เลือก",
+    arrivalClosedHint: "ไม่รับเช็กอินในวันที่เลือก เลือกวันอื่น",
+    departureClosedHint: "ไม่รับเช็กเอาต์ในวันที่เลือก เลือกวันอื่น",
+    soldOutHint: "ห้องเต็มในคืนที่เลือก",
+    minimumStayHint: (count) => `เช็กอินวันที่เลือกต้องพักอย่างน้อย ${count} คืน`,
+    promotionApplied: (code, name) => `ใช้โค้ด ${code} แล้ว: ${name}`,
+    promotionInvalid: "โค้ดนี้ใช้ไม่ได้",
+    promotionNotStarted: "โค้ดนี้ยังไม่เริ่มใช้",
+    promotionEnded: "โค้ดนี้หมดเขตแล้ว",
+    promotionUsedUp: "โค้ดนี้ถูกใช้ครบแล้ว",
+    promotionNotForThisStay: "โค้ดนี้ใช้กับวันหรือห้องที่เลือกไม่ได้",
+    priceBeforeCode: "ราคาก่อนใช้โค้ด",
+    promotionLine: (code) => `โปรโมชัน ${code}`,
+    wasNow: (was, now) => `ราคาปกติ ${was} ลดเหลือ ${now}`,
+    promotionUsed: (code) => `โค้ด ${code}`,
     noRoomOffers: "ไม่มีห้องว่างในวันที่เลือก ลองเปลี่ยนวัน",
     yourStay: "การเข้าพักของคุณ",
     roomAmount: "ค่าห้อง",
@@ -112,6 +132,9 @@ const localizedStrings = {
     invalid_guest_phone: "ใส่เบอร์โทรที่ติดต่อได้",
     invalid_guest_email: "อีเมลไม่ถูกต้อง",
     room_offer_changed: "ราคาหรือห้องเปลี่ยนไปแล้ว ดูห้องว่างอีกครั้ง",
+    invalid_promo_code: "โค้ดส่วนลดนี้ใช้ไม่ได้",
+    too_many_promo_code_attempts: "ลองโค้ดหลายครั้งเกินไป ลองใหม่ในอีก 1 ชั่วโมง",
+    promotion_used_up: "คุณใช้โค้ดนี้ครบแล้ว",
     room_type_sold_out: "ห้องนี้เพิ่งเต็ม ลองห้องอื่นหรือวันอื่น",
     too_many_unpaid_bookings: "คุณมีการจองที่ยังไม่ได้ชำระเงินหลายรายการ ชำระหรือยกเลิกก่อนจองเพิ่ม",
     guest_blocked: "ไม่สามารถจองออนไลน์ได้ กรุณาติดต่อโรงแรมโดยตรง",
@@ -132,11 +155,14 @@ const localizedStrings = {
     checkOut: "Check-out",
     adults: "Adults",
     children: "Children",
+    infants: "Infants (under 2)",
+    promoCode: "Promo code (optional)",
     searchRoomOffers: "See available rooms",
     searchingRoomOffers: "Finding rooms…",
     nightCount: (count) => count === 1 ? "1 night" : `${count} nights`,
-    guestCount: (adults, children) => `${adults} ${adults === 1 ? "adult" : "adults"}` +
-      (children ? ` · ${children} ${children === 1 ? "child" : "children"}` : ""),
+    guestCount: (adults, children, infants) => `${adults} ${adults === 1 ? "adult" : "adults"}` +
+      (children ? ` · ${children} ${children === 1 ? "child" : "children"}` : "") +
+      (infants ? ` · ${infants} ${infants === 1 ? "infant" : "infants"}` : ""),
     roomsLeft: (count) => count <= 3 ? (count === 1 ? "1 room left" : `${count} rooms left`) : "",
     chooseRoomOffer: "Choose",
     breakfastIncluded: "Breakfast included",
@@ -146,7 +172,24 @@ const localizedStrings = {
     tooFewNights: (count) => `Minimum stay ${count} nights`,
     tooManyNights: (count) => `Maximum stay ${count} nights`,
     closedNights: "Not on sale for some of these nights",
+    closedToArrival: "No check-ins on this date",
+    closedToDeparture: "No check-outs on this date",
+    outsideBookingWindow: "Not on sale for this arrival date",
     notSold: "Not on sale for these dates",
+    arrivalClosedHint: "No check-ins on this date. Choose another.",
+    departureClosedHint: "No check-outs on this date. Choose another.",
+    soldOutHint: "Fully booked this night",
+    minimumStayHint: (count) => `Arriving this day, stay at least ${count} nights`,
+    promotionApplied: (code, name) => `Code ${code} applied: ${name}`,
+    promotionInvalid: "This code isn't valid",
+    promotionNotStarted: "This code can't be used yet",
+    promotionEnded: "This code has ended",
+    promotionUsedUp: "This code has been fully used",
+    promotionNotForThisStay: "This code doesn't apply to these dates or rooms",
+    priceBeforeCode: "Price before the code",
+    promotionLine: (code) => `Promotion ${code}`,
+    wasNow: (was, now) => `Was ${was}, now ${now}`,
+    promotionUsed: (code) => `Code ${code}`,
     noRoomOffers: "No rooms are available on these dates. Try other dates.",
     yourStay: "Your stay",
     roomAmount: "Room",
@@ -216,6 +259,9 @@ const localizedStrings = {
     invalid_guest_phone: "Enter a phone number the hotel can reach.",
     invalid_guest_email: "This email isn't valid.",
     room_offer_changed: "The price or the room changed. See available rooms again.",
+    invalid_promo_code: "This promo code isn't valid.",
+    too_many_promo_code_attempts: "Too many codes tried. Try again in an hour.",
+    promotion_used_up: "You've used this code as many times as it allows.",
     room_type_sold_out: "This room just sold out. Try another room or dates.",
     too_many_unpaid_bookings: "You have several unpaid bookings. Pay or cancel them before booking more.",
     guest_blocked: "Online booking isn't available. Please contact the hotel directly.",
@@ -453,9 +499,16 @@ const bookingState = {
   // Codes are lowercase; a link typed or shared in capitals still works.
   bookingPageCode: pageParameters.get("h")?.toLowerCase() ?? null,
   bookingPage: null,
-  stay: { check_in: todayPlusDays(0), check_out: todayPlusDays(1), adults: 2, children: 0 },
+  stay: {
+    check_in: todayPlusDays(0), check_out: todayPlusDays(1), adults: 2, children: 0, infants: 0,
+    // A hotel may share a link with its code: ?h=…&promo=SONGKRAN10.
+    promo_code: (pageParameters.get("promo") ?? "").trim().slice(0, 30),
+  },
   roomOffers: null,
   chosenRoomOffer: null,
+  chosenPromotion: null,
+  // Per date, from the booking engine's calendar: closed to arrival or departure, minimum stay, sold out.
+  calendar: null,
   guest: { name: "", phone: "", email: "", note: "" },
 };
 
@@ -512,17 +565,35 @@ function numberPicker(id, selectedNumber, firstNumber, lastNumber) {
 
 function staySearchForm() {
   const stay = bookingState.stay;
-  const checkIn = makeElement("input", { type: "date", id: "check-in", value: stay.check_in, min: todayPlusDays(0), required: true });
+  const checkIn = makeElement("input", {
+    type: "date", id: "check-in", value: stay.check_in, min: todayPlusDays(0), required: true,
+    "aria-describedby": "check-in-hint",
+  });
   const checkOut = makeElement("input", {
     type: "date", id: "check-out", value: stay.check_out, min: dateByAddingDays(stay.check_in, 1), required: true,
+    "aria-describedby": "check-out-hint",
   });
+  const checkInHint = makeElement("p", { className: "muted small", id: "check-in-hint", "aria-live": "polite" });
+  const checkOutHint = makeElement("p", { className: "muted small", id: "check-out-hint", "aria-live": "polite" });
+  const showDateHints = () => {
+    checkInHint.textContent = arrivalHint(checkIn.value);
+    checkOutHint.textContent = departureHint(checkOut.value);
+  };
   checkIn.addEventListener("change", () => {
     if (!checkIn.value) return;
     checkOut.min = dateByAddingDays(checkIn.value, 1);
     if (!checkOut.value || checkOut.value <= checkIn.value) checkOut.value = dateByAddingDays(checkIn.value, 1);
+    showDateHints();
   });
+  checkOut.addEventListener("change", showDateHints);
+  loadCalendar().then(showDateHints);
   const adults = numberPicker("adults", stay.adults, 1, 10);
   const children = numberPicker("children", stay.children, 0, 10);
+  const infants = numberPicker("infants", stay.infants ?? 0, 0, 4);
+  const promoCode = makeElement("input", {
+    id: "promo-code", value: stay.promo_code ?? "", maxlength: 30, autocomplete: "off", autocapitalize: "characters",
+    spellcheck: "false", autocorrect: "off",
+  });
   const searchButton = makeElement("button", { type: "submit", className: "block" }, localizedText("searchRoomOffers"));
   return makeElement("form", {
     className: "card",
@@ -530,17 +601,50 @@ function staySearchForm() {
       event.preventDefault();
       bookingState.stay = {
         check_in: checkIn.value, check_out: checkOut.value, adults: Number(adults.value), children: Number(children.value),
+        infants: Number(infants.value), promo_code: promoCode.value.trim(),
       };
       await searchRoomOffers(searchButton);
     },
   },
   makeElement("div", { className: "row" },
-    makeElement("div", { className: "field" }, makeElement("label", { for: "check-in" }, localizedText("checkIn")), checkIn),
-    makeElement("div", { className: "field" }, makeElement("label", { for: "check-out" }, localizedText("checkOut")), checkOut)),
+    makeElement("div", { className: "field" }, makeElement("label", { for: "check-in" }, localizedText("checkIn")), checkIn,
+      checkInHint),
+    makeElement("div", { className: "field" }, makeElement("label", { for: "check-out" }, localizedText("checkOut")), checkOut,
+      checkOutHint)),
   makeElement("div", { className: "row" },
     makeElement("div", { className: "field" }, makeElement("label", { for: "adults" }, localizedText("adults")), adults),
     makeElement("div", { className: "field" }, makeElement("label", { for: "children" }, localizedText("children")), children)),
+  makeElement("div", { className: "row" },
+    makeElement("div", { className: "field" }, makeElement("label", { for: "infants" }, localizedText("infants")), infants),
+    makeElement("div", { className: "field" }, makeElement("label", { for: "promo-code" }, localizedText("promoCode")), promoCode)),
   searchButton);
+}
+
+/** The booking engine's calendar for the next 92 days, once; with an older booking engine, or when the request fails,
+ * the page simply shows no hints. */
+async function loadCalendar() {
+  if (bookingState.calendar) return;
+  try {
+    const { calendar } = await requestBookingEngine(
+      "GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}/calendar`,
+      { query: { from: todayPlusDays(0), to: todayPlusDays(91) } });
+    bookingState.calendar = new Map((calendar ?? []).map((day) => [day.stay_date, day]));
+  } catch {
+    bookingState.calendar = new Map();
+  }
+}
+
+/** What the guest should know about arriving on a date: sold out, closed to arrival, or a minimum stay. */
+function arrivalHint(date) {
+  const day = bookingState.calendar?.get(date);
+  if (!day) return "";
+  if (day.is_sold_out) return localizedText("soldOutHint");
+  if (day.closed_to_arrival) return localizedText("arrivalClosedHint");
+  return day.minimum_nights > 1 ? localizedText("minimumStayHint", day.minimum_nights) : "";
+}
+
+function departureHint(date) {
+  return bookingState.calendar?.get(date)?.closed_to_departure ? localizedText("departureClosedHint") : "";
 }
 
 async function searchRoomOffers(searchButton) {
@@ -548,11 +652,18 @@ async function searchRoomOffers(searchButton) {
   searchButton.disabled = true;
   searchButton.textContent = localizedText("searchingRoomOffers");
   try {
+    const { promo_code: code, ...stay } = bookingState.stay;
+    // A code is sent only when there is one, with this device's id: the booking engine limits how many codes a device
+    // may try.
+    const query = code ? { ...stay, promo_code: code, device_id: deviceIdentifier() } : stay;
     bookingState.roomOffers = await requestBookingEngine(
-      "GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}/room-offers`, { query: bookingState.stay });
+      "GET", `/booking-pages/${encodeURIComponent(bookingState.bookingPageCode)}/room-offers`, { query });
     showRoomOffers();
     offersSection.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
+    // The stay on screen is the new one; offers for the old one must not stay behind it.
+    bookingState.roomOffers = null;
+    bookingState.chosenRoomOffer = null;
     offersSection.replaceChildren(errorWithRetry(error, () => searchRoomOffers(searchButton)));
   } finally {
     searchButton.disabled = false;
@@ -582,7 +693,11 @@ function unavailabilityMessage(unavailableRoomType) {
     case "too_many_guests": return localizedText("tooManyGuests");
     case "too_few_nights": return localizedText("tooFewNights", unavailableRoomType.minimum_nights);
     case "too_many_nights": return localizedText("tooManyNights", unavailableRoomType.maximum_nights);
-    case "closed": return localizedText("closedNights");
+    case "closed":
+    case "closed_by_yield_rule": return localizedText("closedNights");
+    case "closed_to_arrival": return localizedText("closedToArrival");
+    case "closed_to_departure": return localizedText("closedToDeparture");
+    case "outside_booking_window": return localizedText("outsideBookingWindow");
     default: return localizedText("notSold");
   }
 }
@@ -591,7 +706,7 @@ function showRoomOffers() {
   const offersSection = document.getElementById("room-offers");
   if (!offersSection || !bookingState.roomOffers) return;
   const page = bookingState.bookingPage;
-  const { room_offers: roomOffers, unavailable_room_types: unavailableRoomTypes } = bookingState.roomOffers;
+  const { room_offers: roomOffers, unavailable_room_types: unavailableRoomTypes, promotion } = bookingState.roomOffers;
   const stay = bookingState.stay;
   const heading = makeElement("h2", {},
     `${formattedStayDates(stay.check_in, stay.check_out)} · ${localizedText("nightCount", numberOfNightsBetween(stay.check_in, stay.check_out))}`);
@@ -613,21 +728,51 @@ function showRoomOffers() {
             makeElement("div", { className: "muted small" },
               offer.includes_breakfast ? localizedText("breakfastIncluded") : localizedText("roomOnly"),
               localizedText("roomsLeft", offer.rooms_left) && ` · ${localizedText("roomsLeft", offer.rooms_left)}`),
-            makeElement("div", { className: "price" }, formattedMoney(offer.total, page.currency_code)),
+            showsOriginalPrice(offer, promotion)
+              ? makeElement("div", {
+                className: "price", role: "text",
+                "aria-label": localizedText("wasNow", formattedMoney(offer.total_before_discount, page.currency_code),
+                  formattedMoney(offer.total, page.currency_code)),
+              },
+              makeElement("s", { className: "muted", "aria-hidden": "true" },
+                formattedMoney(offer.total_before_discount, page.currency_code)), " ",
+              makeElement("span", { "aria-hidden": "true" }, formattedMoney(offer.total, page.currency_code)))
+              : makeElement("div", { className: "price" }, formattedMoney(offer.total, page.currency_code)),
             makeElement("div", { className: "muted small" }, localizedText("taxesIncluded"))),
           makeElement("button", {
             type: "button",
             onclick: () => {
               bookingState.chosenRoomOffer = offer;
+              bookingState.chosenPromotion = offer.promotion_applied ? promotion : null;
               showGuestDetailsForm();
             },
           }, localizedText("chooseRoomOffer")))));
   }).filter(Boolean);
   offersSection.replaceChildren(
     heading,
+    roomOffers.length > 0 || !["not_for_this_stay"].includes(promotion?.status) ? promotionNotice(promotion) : "",
     roomOffers.length === 0 ? makeElement("p", { className: "notice" }, localizedText("noRoomOffers")) : "",
     ...roomTypeCards,
   );
+}
+
+/** What became of the code the guest typed; nothing when there was none (or the booking engine is older). */
+function promotionNotice(promotion) {
+  if (!promotion) return "";
+  const messages = {
+    applied: () => localizedText("promotionApplied", promotion.code, promotion.name),
+    not_started: () => localizedText("promotionNotStarted"),
+    ended: () => localizedText("promotionEnded"),
+    used_up: () => localizedText("promotionUsedUp"),
+    not_for_this_stay: () => localizedText("promotionNotForThisStay"),
+  };
+  const message = (messages[promotion.status] ?? (() => localizedText("promotionInvalid")))();
+  return makeElement("p", { className: promotion.status === "applied" ? "notice" : "error", role: "status" }, message);
+}
+
+/** Whether to show the price without the code, crossed out: the hotel's choice for each code. */
+function showsOriginalPrice(offer, promotion) {
+  return Boolean(offer.promotion_applied && promotion?.shows_original_price && offer.total_before_discount > offer.total);
 }
 
 function hotelInfoSections(hotel) {
@@ -728,7 +873,12 @@ function priceBreakdownTable(offer, currencyCode) {
   const row = (label, amount, className) =>
     makeElement("tr", { className }, makeElement("td", {}, label), makeElement("td", {}, formattedMoney(amount, currencyCode)));
   const amountDueAtHotel = offer.total - offer.prepayment_amount;
+  const promotion = bookingState.chosenPromotion;
+  const showsDiscount = showsOriginalPrice(offer, promotion);
   return makeElement("table", { className: "lines" }, makeElement("tbody", {},
+    showsDiscount && row(localizedText("priceBeforeCode"), offer.total_before_discount, "muted"),
+    showsDiscount && row(localizedText("promotionLine", promotion.code),
+      -Math.round((offer.total_before_discount - offer.total) * 100) / 100, "muted"),
     row(`${localizedText("roomAmount")} · ${localizedText("nightCount", offer.nights.length)}`, offer.room_amount),
     offer.charges.map((charge) => row(charge.name, charge.amount)),
     row(localizedText("total"), offer.total, "total"),
@@ -772,6 +922,8 @@ function showGuestDetailsForm() {
             room_type_id: offer.room_type_id,
             rate_plan_id: offer.rate_plan_id,
             ...stay,
+            // The code goes with the booking only on an offer it discounted; the booking engine checks it again.
+            promo_code: offer.promotion_applied ? stay.promo_code : undefined,
             guest: bookingState.guest,
             device_id: deviceIdentifier(),
           },
@@ -811,7 +963,7 @@ function showGuestDetailsForm() {
       makeElement("h3", {}, localizedText("yourStay")),
       makeElement("p", {}, `${roomType?.name ?? ""} · ${offer.rate_plan_name}`),
       makeElement("p", { className: "muted small" },
-        `${formattedStayDates(stay.check_in, stay.check_out)} · ${localizedText("guestCount", stay.adults, stay.children)} · `,
+        `${formattedStayDates(stay.check_in, stay.check_out)} · ${localizedText("guestCount", stay.adults, stay.children, stay.infants)} · `,
         offer.includes_breakfast ? localizedText("breakfastIncluded") : localizedText("roomOnly")),
       priceBreakdownTable(offer, page.currency_code)),
     // Nothing to pay now: the booking waits for the hotel, and the guest knows before confirming.
@@ -867,7 +1019,8 @@ async function showGuestBooking(bookingID, accessToken) {
     makeElement("p", { className: "muted small" },
       `${formattedStayDates(booking.check_in, booking.check_out)} · ` +
       `${localizedText("nightCount", numberOfNightsBetween(booking.check_in, booking.check_out))} · ` +
-      localizedText("guestCount", booking.adults, booking.children)),
+      localizedText("guestCount", booking.adults, booking.children, booking.infants)),
+    booking.promotion_code && makeElement("p", { className: "muted small" }, localizedText("promotionUsed", booking.promotion_code)),
     !isCancelled && makeElement("table", { className: "lines" }, makeElement("tbody", {},
       moneyRow(localizedText("total"), booking.total, "total"),
       booking.prepayment_amount > 0 &&
